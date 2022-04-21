@@ -54,7 +54,7 @@ def read_markers(marker_seq_file):
     marker_seq = []
     names = []
     i = -1
-    with open("D1D2_107.fas", 'r') as marker:
+    with open(marker_seq_file, 'r') as marker:
         for line in marker:
             if line.startswith(">"):
                 names.append(line[:-1])
@@ -112,7 +112,7 @@ class cnn_net(torch.nn.Module):
 
 
 # train with validation
-def train(train_data, train_targets, test_data, test_targets):
+def train(train_data, train_targets, test_data, test_targets, epoch_num=30):
     model = cnn_net()
     def val():
         with torch.no_grad():
@@ -122,7 +122,7 @@ def train(train_data, train_targets, test_data, test_targets):
     # train
     criterion = torch.nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-3)
-    epoch_num = 30
+    # epoch_num = 30
     history = {'train':[],'test':[]}
     for epoch in range(epoch_num):
         optimizer.zero_grad()
@@ -168,7 +168,7 @@ def inference(model, input, taregt=None, exp_name=None):
 
 def getparser():
     parser = argparse.ArgumentParser(
-        description="""training or run prediction of drug resistance using marker sequences"""
+        description="""training or run prediction of drug resistance using marker sequences, score is log(concentration)"""
     )
     parser.add_argument(
         "seq",
@@ -183,6 +183,7 @@ def getparser():
     )
     parser.add_argument("--drug_data", help="experiment tested drug resistance value", type=str)
     parser.add_argument("--model_name", help="experiment name, for the of checkpoint to save or load", type=str)
+    parser.add_argument("--epoch_num", help="train the model for how many epoches, default is 30.", default=30)
     return parser.parse_args()
 
 
@@ -192,6 +193,7 @@ if __name__ == '__main__':
     mode = args.mode
     drug_data = args.drug_data
     model_name = args.model_name
+    epoch_num = args.epoch_num
 
     # names, d1d2_seq = read_markers("D1D2_107.fas")
     names, seq_list = read_markers(seq_file)
@@ -220,6 +222,6 @@ if __name__ == '__main__':
         pred = inference(model, input_data).tolist()
         of = open(f"{seq_file}.dscore", "w+")
         for name, value in zip(names, pred):
-            of.write(f"{name}\t{str(round(np.exp(value), 5))}\n")
+            of.write(f"{name}\t{str(round(value, 5))}\n")
         of.close()
         print(f"Finished prediction using {model_name}.pth!")
